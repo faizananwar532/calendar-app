@@ -11,10 +11,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - {{ .Values.frontend.hostname | quote }}
+    - "{{ .Values.namespace }}.{{ .Values.frontend.hostname }}"
     secretName: {{ template "relname" . }}-frontend-tls
   rules:
-  - host: {{ .Values.frontend.hostname | quote }}
+  - host: "{{ .Values.namespace }}.{{ .Values.frontend.hostname }}"
     http:
       paths:
       - path: /
