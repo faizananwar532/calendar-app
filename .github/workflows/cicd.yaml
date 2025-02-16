@@ -44,3 +44,19 @@ jobs:
           docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
           docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
 
+      - name: Install OpenTelemetry Collector
+        run: |
+          curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
+          chmod +x /usr/local/bin/otelcol
+
+      - name: Start OpenTelemetry Collector
+        run: |
+          otelcol --config=/path/to/otel-config.yaml &
+
+      - name: Run Build Step
+        run: |
+          curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
+            "name": "GitHub Actions Build",
+            "startTimeUnixNano": "$(date +%s%N)",
+            "endTimeUnixNano": "$(date +%s%N)"
+          }'
