@@ -1,0 +1,46 @@
+name: Build and Push Backend & Frontend to ECR
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set SHORT_SHA Environment Variable
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
+
+      - name: Build and Push Backend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+        run: |
+          docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
+          docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
+
+      - name: Build and Push Frontend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+        run: |
+          docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
+          docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
+
