@@ -22,7 +22,7 @@ jobs:
       - name: Start Tracing
         run: |
           cat otel-config.yaml
-          otelcol --config=otel-config.yaml &
+          nohup otelcol --config=otel-config.yml > otelcol.log 2>&1 &
       
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
