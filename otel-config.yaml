@@ -6,6 +6,11 @@ receivers:
 
 processors:
   batch:
+  transform:
+    trace_statements:
+      - context: resource
+        statements:
+          - set(attributes["service.name"], "github-actions")
 
 exporters:
   logging: {}
@@ -27,7 +32,7 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      processors: [batch,trasform]
       exporters: [otlp]
 
     # metrics:
