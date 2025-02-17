@@ -23,7 +23,7 @@ jobs:
         run: |
           ls
           pwd
-          otelcol --config=otel-config.yml &
+          otelcol --config=otel-config.yaml &
       
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
