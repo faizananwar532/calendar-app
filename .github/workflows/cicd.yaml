@@ -5,119 +5,87 @@ on:
     branches:
       - main 
 
-# jobs:
-#   build-and-push:
-#     name: Build and Push Docker Images to ECR
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v4
-
-#       - name: Configure AWS Credentials
-#         uses: aws-actions/configure-aws-credentials@v2
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ${{ secrets.AWS_REGION }}
-
-#       - name: Login to Amazon ECR
-#         id: login-ecr
-#         uses: aws-actions/amazon-ecr-login@v1
-
-#       - name: Set SHORT_SHA Environment Variable
-#         run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
-
-#       - name: Build and Push Backend Image
-#         env:
-#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#           BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
-#         run: |
-#           docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
-#           docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
-
-#       - name: Build and Push Frontend Image
-#         env:
-#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#           FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
-#         run: |
-#           docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
-#           docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
-
-#       - name: Install OpenTelemetry Collector
-#         run: |
-#           curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
-#           chmod +x /usr/local/bin/otelcol
-
-#       - name: Start OpenTelemetry Collector
-#         run: |
-#           otelcol --config=/otel-config.yaml &
-
-#       - name: Run Build Step
-#         run: |
-#           curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
-#             "name": "GitHub Actions Build",
-#             "startTimeUnixNano": "$(date +%s%N)",
-#             "endTimeUnixNano": "$(date +%s%N)"
-#           }'
-
 jobs:
-  build:
+  build-and-push:
+    name: Build and Push Docker Images to ECR
     runs-on: ubuntu-latest
+
     steps:
+      # - name: Checkout Repository
+      #   uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set SHORT_SHA Environment Variable
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
+      
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Send trace to OpenTelemetry Collector
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
         run: |
-          TRACE_ID=$(openssl rand -hex 16)
-          SPAN_ID=$(openssl rand -hex 8)
-          TIMESTAMP=$(date +%s%N)
-          DURATION=$((5 * 1000000000))  # 5 seconds in nanoseconds
+          npm install @opentelemetry/sdk-node @opentelemetry/exporter-otlp-http
 
-          # Send a trace to the OTel Collector
-          curl -X POST http://otel.nadav.online:4318/v1/traces \
-            -H "Content-Type: application/json" \
-            -d '{
-              "resourceSpans": [
-                {
-                  "resource": {
-                    "attributes": [
-                      {
-                        "key": "service.name",
-                        "value": { "stringValue": "github-actions" }
-                      }
-                    ]
-                  },
-                  "scopeSpans": [
-                    {
-                      "spans": [
-                        {
-                          "traceId": "'$TRACE_ID'",
-                          "spanId": "'$SPAN_ID'",
-                          "name": "github-actions-workflow",
-                          "kind": "SPAN_KIND_INTERNAL",
-                          "startTimeUnixNano": "'$TIMESTAMP'",
-                          "endTimeUnixNano": "'$(($TIMESTAMP + $DURATION))'",
-                          "attributes": [
-                            {
-                              "key": "workflow",
-                              "value": { "stringValue": "'${{ github.workflow }}'" }
-                            },
-                            {
-                              "key": "job",
-                              "value": { "stringValue": "'${{ github.job }}'" }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }'
-
-      - name: Push metrics to OpenTelemetry Collector
+      - name: Set up OpenTelemetry
         run: |
-          echo "github_actions_workflow_duration_seconds{workflow='${{ github.workflow }}', job='${{ github.job }}'} 5" > metrics.txt
-          curl -X POST -H "Content-Type: text/plain" --data-binary @metrics.txt http://otel.nadav.online:4318/v1/metrics
+          # Initialize OpenTelemetry
+          node -e "
+          const { NodeTracerProvider } = require('@opentelemetry/sdk-node');
+          const { OTLPTraceExporter } = require('@opentelemetry/exporter-otlp-http');
+          const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+          const provider = new NodeTracerProvider();
+          provider.addSpanProcessor(new SimpleSpanProcessor(new OTLPTraceExporter({
+            url: 'http://otel.nadav.online:4318/v1/traces'
+          })));
+          provider.register();
+          console.log('OpenTelemetry initialized');
+          "
+      
+
+      # - name: Build and Push Backend Image
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+      #   run: |
+      #     docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
+      #     docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
+
+      # - name: Build and Push Frontend Image
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+      #   run: |
+      #     docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
+      #     docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
+
+      # - name: Install OpenTelemetry Collector
+      #   run: |
+      #     curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
+      #     chmod +x /usr/local/bin/otelcol
+
+      # - name: Start OpenTelemetry Collector
+      #   run: |
+      #     otelcol --config=/otel-config.yaml &
+
+      # - name: Run Build Step
+      #   run: |
+      #     curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
+      #       "name": "GitHub Actions Build",
+      #       "startTimeUnixNano": "$(date +%s%N)",
+      #       "endTimeUnixNano": "$(date +%s%N)"
+      #     }'
+
