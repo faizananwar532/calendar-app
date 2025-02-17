@@ -68,20 +68,56 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up OpenTelemetry
-        uses: open-telemetry/opentelemetry-action@v1
-        with:
-          endpoint: http://otel.nadav.online:4318
-          service-name: github-actions
-          traces-endpoint: http://otel.nadav.online:4317
-
-      - name: Run tests
+      - name: Send trace to OpenTelemetry Collector
         run: |
-          echo "Running tests..."
-          # Simulate a test step
-          sleep 5
+          TRACE_ID=$(openssl rand -hex 16)
+          SPAN_ID=$(openssl rand -hex 8)
+          TIMESTAMP=$(date +%s%N)
+          DURATION=$((5 * 1000000000))  # 5 seconds in nanoseconds
 
-      - name: Push metrics
+          # Send a trace to the OTel Collector
+          curl -X POST http://otel.nadav.online:4318/v1/traces \
+            -H "Content-Type: application/json" \
+            -d '{
+              "resourceSpans": [
+                {
+                  "resource": {
+                    "attributes": [
+                      {
+                        "key": "service.name",
+                        "value": { "stringValue": "github-actions" }
+                      }
+                    ]
+                  },
+                  "scopeSpans": [
+                    {
+                      "spans": [
+                        {
+                          "traceId": "'$TRACE_ID'",
+                          "spanId": "'$SPAN_ID'",
+                          "name": "github-actions-workflow",
+                          "kind": "SPAN_KIND_INTERNAL",
+                          "startTimeUnixNano": "'$TIMESTAMP'",
+                          "endTimeUnixNano": "'$(($TIMESTAMP + $DURATION))'",
+                          "attributes": [
+                            {
+                              "key": "workflow",
+                              "value": { "stringValue": "'${{ github.workflow }}'" }
+                            },
+                            {
+                              "key": "job",
+                              "value": { "stringValue": "'${{ github.job }}'" }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }'
+
+      - name: Push metrics to OpenTelemetry Collector
         run: |
-          echo "github_actions_workflow_duration_seconds{workflow='${{ github.workflow }}', job='${{ github.job }}'} $(date +%s)" > metrics.txt
+          echo "github_actions_workflow_duration_seconds{workflow='${{ github.workflow }}', job='${{ github.job }}'} 5" > metrics.txt
           curl -X POST -H "Content-Type: text/plain" --data-binary @metrics.txt http://otel.nadav.online:4318/v1/metrics
