@@ -5,58 +5,83 @@ on:
     branches:
       - main 
 
+# jobs:
+#   build-and-push:
+#     name: Build and Push Docker Images to ECR
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
+
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}
+
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+
+#       - name: Set SHORT_SHA Environment Variable
+#         run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
+
+#       - name: Build and Push Backend Image
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+#         run: |
+#           docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
+#           docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
+
+#       - name: Build and Push Frontend Image
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+#         run: |
+#           docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
+#           docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
+
+#       - name: Install OpenTelemetry Collector
+#         run: |
+#           curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
+#           chmod +x /usr/local/bin/otelcol
+
+#       - name: Start OpenTelemetry Collector
+#         run: |
+#           otelcol --config=/otel-config.yaml &
+
+#       - name: Run Build Step
+#         run: |
+#           curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
+#             "name": "GitHub Actions Build",
+#             "startTimeUnixNano": "$(date +%s%N)",
+#             "endTimeUnixNano": "$(date +%s%N)"
+#           }'
+
 jobs:
-  build-and-push:
-    name: Build and Push Docker Images to ECR
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Set up OpenTelemetry
+        uses: open-telemetry/opentelemetry-action@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          endpoint: http://otel.nadav.online:4318
+          service-name: github-actions
+          traces-endpoint: http://otel.nadav.online:4317
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Set SHORT_SHA Environment Variable
-        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
-
-      - name: Build and Push Backend Image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+      - name: Run tests
         run: |
-          docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
-          docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
+          echo "Running tests..."
+          # Simulate a test step
+          sleep 5
 
-      - name: Build and Push Frontend Image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+      - name: Push metrics
         run: |
-          docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
-          docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
-
-      - name: Install OpenTelemetry Collector
-        run: |
-          curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
-          chmod +x /usr/local/bin/otelcol
-
-      - name: Start OpenTelemetry Collector
-        run: |
-          otelcol --config=/path/to/otel-config.yaml &
-
-      - name: Run Build Step
-        run: |
-          curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
-            "name": "GitHub Actions Build",
-            "startTimeUnixNano": "$(date +%s%N)",
-            "endTimeUnixNano": "$(date +%s%N)"
-          }'
+          echo "github_actions_workflow_duration_seconds{workflow='${{ github.workflow }}', job='${{ github.job }}'} $(date +%s)" > metrics.txt
+          curl -X POST -H "Content-Type: text/plain" --data-binary @metrics.txt http://otel.nadav.online:4318/v1/metrics
