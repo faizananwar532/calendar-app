@@ -11,7 +11,7 @@ exporters:
   logging: {}
 
   otlp:
-    endpoint: http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4318
+    endpoint: http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4317
     tls:
       insecure: true
 
