@@ -3,13 +3,13 @@ receivers:
     protocols:
       grpc:
       http:
-  prometheus:  # Add Prometheus receiver
-    config:
-      scrape_configs:
-        - job_name: 'otel-collector'
-          scrape_interval: 10s  # How often to scrape metrics
-          static_configs:
-            - targets: ['http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4317']  # OTel Collector's own metrics endpoint
+  # prometheus:  # Add Prometheus receiver
+  #   config:
+  #     scrape_configs:
+  #       - job_name: 'otel-collector'
+  #         scrape_interval: 10s  # How often to scrape metrics
+  #         static_configs:
+  #           - targets: ['http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4317']  # OTel Collector's own metrics endpoint
 
 
 processors:
@@ -25,11 +25,11 @@ exporters:
     endpoint: http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4318/v1/traces
     tls:
       insecure: true
-  prometheus:  # Add Prometheus exporter
-    endpoint: "https://prometheus.nadav.online/api/v1/write"  # Expose metrics on this endpoint
-    namespace: "otel"  # Prefix for all metrics
-    const_labels:
-      environment: "ci"
+  # prometheus:  # Add Prometheus exporter
+  #   endpoint: "https://prometheus.nadav.online/api/v1/write"  # Expose metrics on this endpoint
+  #   namespace: "otel"  # Prefix for all metrics
+  #   const_labels:
+  #     environment: "ci"
 
 service:
   pipelines:
@@ -38,7 +38,7 @@ service:
       processors: [batch, attributes]
       exporters: [otlphttp]
     
-    metrics:  # Metrics pipeline
-      receivers: [prometheus]
-      processors: [batch]
-      exporters: [prometheus]
+    # metrics:  # Metrics pipeline
+    #   receivers: [prometheus]
+    #   processors: [batch]
+    #   exporters: [prometheus]
