@@ -11,9 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # - name: Checkout Repository
-      #   uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
+      - name: Install OpenTelemetry CLI
+        run: |
+          curl -sSL https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.97.0/otelcol_0.97.0_linux_amd64.tar.gz | tar -xz
+          sudo mv otelcol /usr/local/bin/
+      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -27,45 +32,7 @@ jobs:
 
       - name: Set SHORT_SHA Environment Variable
         run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
-      
-      - name: Checkout repository
-        uses: actions/checkout@v2
   
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'  # Set your desired Node.js version
-  
-      - name: Install dependencies
-        run: |
-          npm init -y  # Initialize a new Node.js project (if not already present)
-          npm install @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/exporter-otlp-http @opentelemetry/sdk-trace-base
-  
-      - name: Run OpenTelemetry script
-        run: |
-          node -e "
-            const { NodeSDK } = require('@opentelemetry/sdk-node');
-            const { OTLPTraceExporter } = require('@opentelemetry/exporter-otlp-http');
-            const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
-  
-            const sdk = new NodeSDK({
-              traceExporter: new OTLPTraceExporter({
-                url: 'http://otel.nadav.online:4318/v1/traces',
-              }),
-              spanProcessor: new SimpleSpanProcessor(new OTLPTraceExporter({
-                url: 'http://otel.nadav.online:4318/v1/traces',
-              })),
-            });
-  
-            sdk.start()
-              .then(() => {
-                console.log('OpenTelemetry initialized');
-              })
-              .catch(err => {
-                console.error('Error initializing OpenTelemetry SDK:', err);
-              });
-          "
-
       # - name: Build and Push Backend Image
       #   env:
       #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
