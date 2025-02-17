@@ -22,7 +22,7 @@ jobs:
       - name: Start Tracing
         run: |
           cat otel-config.yaml
-          otelcol --config=otel-config.yaml &
+          otelcol --config=otel-config.yml > otelcol.log 2>&1 &
           tail -f otelcol.log
       
       - name: Send Sample Trace
