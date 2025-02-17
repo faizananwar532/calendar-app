@@ -21,8 +21,7 @@ jobs:
       
       - name: Start Tracing
         run: |
-          ls
-          pwd
+          cat otel-config.yaml
           otelcol --config=otel-config.yaml &
       
       - name: Configure AWS Credentials
