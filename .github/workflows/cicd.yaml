@@ -14,62 +14,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install OpenTelemetry CLI
-        run: |
-          curl -sSL https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.97.0/otelcol_0.97.0_linux_amd64.tar.gz | tar -xz
-          sudo mv otelcol /usr/local/bin/
-      
-      - name: Start Tracing
-        run: |
-          cat otel-config.yaml
-          otelcol --config=otel-config.yml > otelcol.log 2>&1 &
-          tail -f otelcol.log
-      
-      - name: Send Sample Trace
-        run: |
-          curl -X POST http://a1174a7133ac0404482e155f3a76871e-1220444037.us-east-1.elb.amazonaws.com:4318/v1/traces \
-            -H "Content-Type: application/json" \
-            -d '{
-                  "resourceSpans": [
-                    {
-                      "resource": {
-                        "attributes": [
-                          {
-                            "key": "service.name",
-                            "value": {
-                              "stringValue": "test-service"
-                            }
-                          }
-                        ]
-                      },
-                      "scopeSpans": [
-                        {
-                          "scope": {
-                            "name": "test-scope"
-                          },
-                          "spans": [
-                            {
-                              "traceId": "5b8aa5a2d2c872e8321cf6e9b3b79c4a",
-                              "spanId": "5fb397c34d42d75a",
-                              "name": "test-span",
-                              "kind": "SPAN_KIND_INTERNAL",
-                              "startTimeUnixNano": "1680000000000000000",
-                              "endTimeUnixNano": "1680000001000000000",
-                              "attributes": [
-                                {
-                                  "key": "test-attribute",
-                                  "value": {
-                                    "stringValue": "test-value"
-                                  }
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }'
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -83,37 +27,20 @@ jobs:
 
       - name: Set SHORT_SHA Environment Variable
         run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
-  
-      # - name: Build and Push Backend Image
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
-      #   run: |
-      #     docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
-      #     docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
 
-      # - name: Build and Push Frontend Image
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
-      #   run: |
-      #     docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
-      #     docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
+      - name: Build and Push Backend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+        run: |
+          docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
+          docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
 
-      # - name: Install OpenTelemetry Collector
-      #   run: |
-      #     curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-linux-amd64 -o /usr/local/bin/otelcol
-      #     chmod +x /usr/local/bin/otelcol
-
-      # - name: Start OpenTelemetry Collector
-      #   run: |
-      #     otelcol --config=/otel-config.yaml &
-
-      # - name: Run Build Step
-      #   run: |
-      #     curl -X POST "https://otel.nadav.online/v1/traces" -H "Content-Type: application/json" -d '{
-      #       "name": "GitHub Actions Build",
-      #       "startTimeUnixNano": "$(date +%s%N)",
-      #       "endTimeUnixNano": "$(date +%s%N)"
-      #     }'
+      - name: Build and Push Frontend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+        run: |
+          docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
+          docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
 
