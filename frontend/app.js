@@ -1,6 +1,6 @@
 // Define the API base URL
-// const API_BASE_URL = 'http://localhost:3000/api';
-const API_BASE_URL = 'https://backend.nadav.online/api';
+const API_BASE_URL = 'http://localhost:3000/api';
+// const API_BASE_URL = 'https://backend.nadav.online/api';
 
 // Function to fetch events from the API
 async function getEvents() {
@@ -17,7 +17,7 @@ async function getEvents() {
       eventDiv.innerHTML = `
         <h3>${event.name}</h3>
         <p>${event.date}</p>
-        <button onclick="deleteEvent(${event.id})">מחק</button>
+        <button onclick="deleteEvent(${event.id})">delete</button>
       `;
       eventsList.appendChild(eventDiv);
     });
