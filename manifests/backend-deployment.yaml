@@ -1,0 +1,103 @@
+---
+# Source: my-app/templates/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app-backend
+  namespace: training
+  labels:
+    app.kubernetes.io/name: my-app
+    app.kubernetes.io/instance: my-app-backend
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: my-app
+    app.kubernetes.io/managed-by: helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: my-app
+        component: backend
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.35.0-uclibc
+          command: ['sh', '-c', 'until nc -z my-mysql.training.svc.cluster.local 3306; do echo "Waiting for MySQL..."; sleep 5; done;']
+      containers:
+        - name: my-app-backend
+          image: "992382560483.dkr.ecr.us-east-1.amazonaws.com/trainings:backend"
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 3000
+            name: http-backend
+          env:
+            - name: MYSQL_HOST
+              value: my-mysql.training.svc.cluster.local
+            - name: MYSQL_USER
+              value: root
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              value: calenderDb
+
+---
+# Source: my-app/templates/backend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-backend
+  namespace: training
+  labels:
+    app.kubernetes.io/name: my-app
+    app.kubernetes.io/instance: my-app-backend
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: my-app
+    app.kubernetes.io/managed-by: helm
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http-backend
+  selector:
+    app: my-app
+    component: backend
+
+---
+# Source: my-app/templates/backend-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app-backend
+  namespace: training
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/acme-challenge-type: dns01
+    cert-manager.io/acme-dns01-provider: cloudflare
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - "backend.grandnerds.com"
+    secretName: my-app-backend-tls
+  rules:
+  - host: "backend.grandnerds.com"
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: my-app-backend
+            port:
+              number: 80

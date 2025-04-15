@@ -1,6 +1,6 @@
 // Define the API base URL
-const API_BASE_URL = 'http://localhost:3000/api';
-// const API_BASE_URL = 'https://backend.nadav.online/api';
+// const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://backend.grandnerds.com/api';
 
 // Function to fetch events from the API
 async function getEvents() {

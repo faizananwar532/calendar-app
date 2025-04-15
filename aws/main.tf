@@ -242,7 +242,7 @@ resource "aws_iam_role_policy_attachment" "StagingAmazonEC2ContainerRegistryRead
 resource "aws_eks_cluster" "Staging" {
   name     = var.clustername
   role_arn = aws_iam_role.clusterRole.arn
-  # version = "1.21"
+  # version = "1.22"
   
   vpc_config {
     endpoint_private_access = true
@@ -254,7 +254,6 @@ resource "aws_eks_cluster" "Staging" {
     aws_iam_role_policy_attachment.clusterroleAmazonEKSVPCResourceController,
   ]
 }
-
 
 
 resource "aws_eks_node_group" "StagingSpotNodeGgroup" {
@@ -279,6 +278,78 @@ resource "aws_eks_node_group" "StagingSpotNodeGgroup" {
     ignore_changes = [scaling_config[0].desired_size]
   }
 }
+################################################################
+# OIDC Provider Thumbprint
+data "tls_certificate" "staging_thumbprint" {
+  url = aws_eks_cluster.Staging.identity[0].oidc[0].issuer
+}
+
+# OIDC Provider for IRSA
+resource "aws_iam_openid_connect_provider" "staging_oidc_provider" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.staging_thumbprint.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.Staging.identity[0].oidc[0].issuer
+}
+
+# IAM Trust Policy for EBS CSI Driver
+data "aws_iam_policy_document" "ebs_csi_assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringLike"
+      variable = "${replace(aws_iam_openid_connect_provider.staging_oidc_provider.url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "${replace(aws_iam_openid_connect_provider.staging_oidc_provider.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.staging_oidc_provider.arn]
+    }
+  }
+}
+
+# IAM Role for EBS CSI Driver
+resource "aws_iam_role" "ebs_csi_driver_role_staging" {
+  name               = "AmazonEKS_EBS_CSI_DriverRole_Staging"
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_assume_role_policy.json
+}
+
+# Attach EBS CSI Driver Policy
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver_role_staging.name
+}
+
+# Install EBS CSI Driver as Addon
+resource "aws_eks_addon" "ebs_csi_driver_addon" {
+  cluster_name             = aws_eks_cluster.Staging.name
+  addon_name               = "aws-ebs-csi-driver"
+  addon_version            = "v1.32.0-eksbuild.1"
+  service_account_role_arn = aws_iam_role.ebs_csi_driver_role_staging.arn
+}
+
+
+################################################################
+resource "aws_ecr_repository" "my_app_repo" {
+  name                 = var.ecr_name
+  image_tag_mutability = "MUTABLE"
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = {
+    Environment = "trainings"
+    Name        = "april"
+  }
+}
 
 ### outputs
 output "nat_gateway_eips" {
@@ -292,6 +363,7 @@ output "nat_gateway_eips" {
 output "eks_cluster_name" {
   description = "The name of the EKS cluster"
   value       = aws_eks_cluster.Staging.name
+  # sensitive = true
 }
 
 output "eks_cluster_endpoint" {
@@ -308,4 +380,3 @@ output "eks_node_group_subnets" {
   description = "The private subnets used by the EKS node group"
   value       = aws_eks_node_group.StagingSpotNodeGgroup.subnet_ids
 }
-

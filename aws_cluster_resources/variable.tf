@@ -18,15 +18,9 @@ variable "clustername" {
   description = "EKS Cluster Name"
 }
 
-variable "spot_instance_types" {
-  default     = ["t3.medium"]
-  description = "SPOT instance types"
+
+variable "cf_api_token" {
+  description = "cloudflare api token"
+  sensitive   = true
 }
 
-variable "spot_max_size" { default = 10 }
-variable "spot_min_size" { default = 2 }
-variable "spot_desired_size" { default = 2 }
-
-variable "ecr_name" {
-  default = "trainings"
-}
