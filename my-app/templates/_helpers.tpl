@@ -1,15 +1,9 @@
-{{/*
-Expand the name of the chart.
-*/}}
+{{/* Generate release name */}}
 {{- define "my-app.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
+{{/* Create a default fully qualified app name */}}
 {{- define "my-app.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
@@ -23,16 +17,7 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "my-app.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
-Common labels
-*/}}
+{{/* Common labels */}}
 {{- define "my-app.labels" -}}
 helm.sh/chart: {{ include "my-app.chart" . }}
 {{ include "my-app.selectorLabels" . }}
@@ -42,17 +27,28 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{/*
-Selector labels
-*/}}
+{{/* Selector labels */}}
 {{- define "my-app.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "my-app.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
+{{/* Chart name and version as used by the chart label */}}
+{{- define "my-app.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/* Frontend component name */}}
+{{- define "my-app.frontend.name" -}}
+{{- printf "%s-frontend" (include "my-app.fullname" .) }}
+{{- end }}
+
+{{/* Backend component name */}}
+{{- define "my-app.backend.name" -}}
+{{- printf "%s-backend" (include "my-app.fullname" .) }}
+{{- end }}
+
+{{/* Create the name of the service account to use */}}
 {{- define "my-app.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "my-app.fullname" .) .Values.serviceAccount.name }}
@@ -60,7 +56,3 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
-{{- define "relname" -}}
-{{- printf .Release.Name | trunc 24 | trimSuffix "-" -}}
-{{- end -}}
