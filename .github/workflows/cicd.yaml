@@ -3,9 +3,9 @@ name: Build, Push to ECR, and Deploy to EKS
 on:
   workflow_dispatch:
   pull_request:
-  # push:
-  #   branches:
-  #     - main 
+  push:
+    branches:
+      - main 
 
 # Global environment variables available to all jobs
 env:
