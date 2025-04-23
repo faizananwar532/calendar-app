@@ -1,10 +1,19 @@
-name: Build and Push Backend & Frontend to ECR
+name: Build, Push to ECR, and Deploy to EKS
 
 on:
   workflow_dispatch:
+  pull_request:
   # push:
   #   branches:
   #     - main 
+
+# Global environment variables available to all jobs
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+  NAMESPACE: april23
+  APP_NAME: my-app
 
 jobs:
   build-and-push:
@@ -32,16 +41,55 @@ jobs:
       - name: Build and Push Backend Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          BACKEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_BACKEND }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
-          docker build -t $BACKEND_REPOSITORY:${{ env.SHORT_SHA }} ./backend
-          docker push $BACKEND_REPOSITORY:${{ env.SHORT_SHA }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:backend-${{ env.SHORT_SHA }} ./backend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:backend${{ env.SHORT_SHA }}
 
       - name: Build and Push Frontend Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          FRONTEND_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY_FRONTEND }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
-          docker build -t $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }} ./frontend
-          docker push $FRONTEND_REPOSITORY:${{ env.SHORT_SHA }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.SHORT_SHA }} ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend${{ env.SHORT_SHA }}
 
+  deploy:
+    name: Deploy to EKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Set SHORT_SHA Environment Variable
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
+          
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+        
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+          
+      - name: Deploy with Helm
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          helm upgrade --install ${{ env.APP_NAME }} ./helm-chart \
+            --set namespace=${{ env.NAMESPACE }}
+            --set backend.image.repository=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }} \
+            --set backend.image.tag=backend${{ env.SHORT_SHA }} \
+            --set frontend.image.repository=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }} \
+            --set frontend.image.tag=frontend${{ env.SHORT_SHA }} \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace
