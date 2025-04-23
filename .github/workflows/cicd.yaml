@@ -43,7 +43,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
-          docker build -t $ECR_REPOSITORY:backend-${{ env.SHORT_SHA }} ./backend
+          docker build -t $ECR_REPOSITORY:backend${{ env.SHORT_SHA }} ./backend
           docker push $ECR_REPOSITORY:backend${{ env.SHORT_SHA }}
 
       - name: Build and Push Frontend Image
@@ -51,7 +51,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
         run: |
-          docker build -t $ECR_REPOSITORY:frontend-${{ env.SHORT_SHA }} ./frontend
+          docker build -t $ECR_REPOSITORY:frontend${{ env.SHORT_SHA }} ./frontend
           docker push $ECR_REPOSITORY:frontend${{ env.SHORT_SHA }}
 
   deploy:
