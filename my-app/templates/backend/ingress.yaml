@@ -16,7 +16,7 @@ spec:
   tls:
   - hosts:
     - {{ .Values.backend.ingress.hostname | quote }}
-    secretName: {{ include "my-app.backend.name" . }}-tls
+    secretName: {{ include "my-app.backend.name" . }}-{{ .Values.namespace }}-tls
   {{- end }}
   rules:
   - host: {{ .Values.backend.ingress.hostname | quote }}

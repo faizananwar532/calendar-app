@@ -2,7 +2,7 @@ global:
   replicaCount: 1
 
 # Namespace where resources will be deployed
-namespace: april23
+namespace: april25
 
 # Backend configuration
 backend:
@@ -110,7 +110,39 @@ mysql:
       );
   primary:
     persistence:
-      enabled: false
+      enabled: true      # Changed from false to true
+      storageClass: ""   # Use default StorageClass or specify one
+      size: 1Gi          # Set an appropriate size for your database
+
+openproject:
+  install: false
+  
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: cloudflare
+    host: openproject.grandnerds.com
+    tls:
+      enabled: true
+      secretName: openproject-tls
+  
+  openproject:
+    host: openproject.grandnerds.com
+    admin_user:
+      password: "hihihihi"
+      password_reset: "false"
+      name: "hahahaha"
+      mail: "faizan.anwar@venturenox.com"
+  
+  persistence:
+    enabled: true
+    accessModes:
+      - "ReadWriteOnce"
+    size: "1Gi"
+    storageClassName: "gp2"
 
 # Image pull secrets for private repos
 imagePullSecrets: []

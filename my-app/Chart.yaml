@@ -11,3 +11,7 @@ dependencies:
 - name: mysql
   version: "12.2.2"
   repository: "https://charts.bitnami.com/bitnami"
+- name: openproject
+  version: "9.10.0"
+  repository: https://charts.openproject.org
+  condition: openproject.install
