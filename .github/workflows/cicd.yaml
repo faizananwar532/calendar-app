@@ -54,42 +54,42 @@ jobs:
           docker build -t $ECR_REPOSITORY:frontend${{ env.SHORT_SHA }} ./frontend
           docker push $ECR_REPOSITORY:frontend${{ env.SHORT_SHA }}
 
-  deploy:
-    name: Deploy to EKS
-    needs: build-and-push
-    runs-on: ubuntu-latest
+  # deploy:
+  #   name: Deploy to EKS
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
         
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v2
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ env.AWS_REGION }}
           
-      - name: Set SHORT_SHA Environment Variable
-        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
+  #     - name: Set SHORT_SHA Environment Variable
+  #       run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-8)" >> $GITHUB_ENV
           
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+  #     - name: Update kubeconfig
+  #       run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
         
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
+  #     - name: Install Helm
+  #       uses: azure/setup-helm@v3
+  #       with:
+  #         version: 'latest'
           
-      - name: Deploy with Helm
-        # env:
-          # ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          helm upgrade --install ${{ env.APP_NAME }} ./my-app \
-            --namespace ${{ env.NAMESPACE }} \
-            --set namespace=${{ env.NAMESPACE }} \
-            --set backend.image.repository=${{ env.ECR_REPOSITORY }} \
-            --set backend.image.tag=backend${{ env.SHORT_SHA }} \
-            --set frontend.image.repository=${{ env.ECR_REPOSITORY }} \
-            --set frontend.image.tag=frontend${{ env.SHORT_SHA }} \
-            --create-namespace
+  #     - name: Deploy with Helm
+  #       # env:
+  #         # ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  #       run: |
+  #         helm upgrade --install ${{ env.APP_NAME }} ./my-app \
+  #           --namespace ${{ env.NAMESPACE }} \
+  #           --set namespace=${{ env.NAMESPACE }} \
+  #           --set backend.image.repository=${{ env.ECR_REPOSITORY }} \
+  #           --set backend.image.tag=backend${{ env.SHORT_SHA }} \
+  #           --set frontend.image.repository=${{ env.ECR_REPOSITORY }} \
+  #           --set frontend.image.tag=frontend${{ env.SHORT_SHA }} \
+  #           --create-namespace

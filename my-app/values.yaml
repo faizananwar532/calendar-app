@@ -2,7 +2,7 @@ global:
   replicaCount: 1
 
 # Namespace where resources will be deployed
-namespace: april25
+namespace: april23
 
 # Backend configuration
 backend:
