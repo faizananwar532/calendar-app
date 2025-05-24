@@ -1,6 +1,5 @@
 // Define the API base URL
-const API_BASE_URL = 'http://localhost:3000/api';
-// const API_BASE_URL = 'https://api.exampledomain.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Function to format date to a more readable format
 function formatDate(dateString) {
