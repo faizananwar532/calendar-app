@@ -2,3 +2,7 @@
 *.tfstate*
 *.tfvars
 node_modules
+letsencrypt_prod.yaml
+letsencrypt_staging.yaml
+*.lock
+*.tgz

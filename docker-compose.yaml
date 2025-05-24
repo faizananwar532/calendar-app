@@ -11,7 +11,7 @@ services:
     environment:
       - MYSQL_HOST=mysql
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=12123434Nadav
+      - MYSQL_PASSWORD=12123434example
       - MYSQL_DATABASE=calendarDB
     depends_on:
       - mysql
@@ -22,14 +22,14 @@ services:
     build:
       context: ./frontend
     ports:
-      - "8080:8080"
+      - "80:80"
     depends_on:
       - backend
 
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: 12123434Nadav
+      MYSQL_ROOT_PASSWORD: 12123434example
       MYSQL_DATABASE: calendarDB
     ports:
       - "3306:3306"
