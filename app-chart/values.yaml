@@ -1,0 +1,168 @@
+global:
+  replicaCount: 1
+
+# Namespace where resources will be deployed
+namespace: april23
+
+# Backend configuration
+backend:
+  replicaCount: ~
+  image:
+    repository: "<ECR_REPO>/trainings"
+    tag: "backend"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: cloudflare
+    hostname: api.exampledomain.com
+    pathType: ImplementationSpecific
+    tls: true
+  env:
+    MYSQL_DATABASE: calenderDb
+    # These values should be replaced with references to external secrets in production
+    MYSQL_USER: root
+    MYSQL_PASSWORD: "ASDqwe123!@#"
+  initContainers:
+    waitForMySQL:
+      image: busybox:1.35.0-uclibc
+  # livenessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: http
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  # readinessProbe:
+  #   httpGet:
+  #     path: /health
+  #     port: http
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 10
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Frontend configuration
+frontend:
+  replicaCount: ~
+  image:
+    repository: "<ECR_REPO>/trainings"
+    tag: "frontendv3"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: cloudflare
+    hostname: calendar.exampledomain.com
+    pathType: ImplementationSpecific
+    tls: true
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  # readinessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: http
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 10
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+
+# MySQL configuration
+mysql:
+  fullnameOverride: ~
+  auth:
+    rootPassword: "ASDqwe123!@#"
+    database: "calenderDb"
+  initdbScripts:
+    create_table.sql: |
+      USE calenderDb;
+      CREATE TABLE IF NOT EXISTS events (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+  primary:
+    persistence:
+      enabled: true      # Changed from false to true
+      storageClass: ""   # Use default StorageClass or specify one
+      size: 1Gi          # Set an appropriate size for your database
+
+openproject:
+  install: false
+  
+  ingress:
+    enabled: true
+    ingressClassName: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: cloudflare
+    host: openproject.exampledomain.com
+    tls:
+      enabled: true
+      secretName: openproject-tls
+  
+  openproject:
+    host: openproject.exampledomain.com
+    admin_user:
+      password: "hihihihi"
+      password_reset: "false"
+      name: "hahahaha"
+      mail: "faizan.anwar@venturenox.com"
+  
+  persistence:
+    enabled: true
+    accessModes:
+      - "ReadWriteOnce"
+    size: "1Gi"
+    storageClassName: "gp2"
+
+# Image pull secrets for private repos
+imagePullSecrets: []
+
+# Override chart name
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account configuration
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+# Pod annotations and labels
+podAnnotations: {}
+podLabels: {}
+
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

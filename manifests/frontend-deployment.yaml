@@ -26,10 +26,10 @@ spec:
     spec:
       containers:
       - name: my-app-frontend
-        image: "992382560483.dkr.ecr.us-east-1.amazonaws.com/trainings:frontend"
+        image: "<ECR REPO>:frontendv2"
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: http-frontend
 
 ---
@@ -72,10 +72,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - "staging.grandnerds.com"
+    - "staging.exampledomain.com"
     secretName: my-app-frontend-tls
   rules:
-  - host: "staging.grandnerds.com"
+  - host: "staging.exampledomain.com"
     http:
       paths:
       - path: /

@@ -30,7 +30,7 @@ spec:
           command: ['sh', '-c', 'until nc -z my-mysql.training.svc.cluster.local 3306; do echo "Waiting for MySQL..."; sleep 5; done;']
       containers:
         - name: my-app-backend
-          image: "992382560483.dkr.ecr.us-east-1.amazonaws.com/trainings:backend"
+          image: "<ECR REPO>:backend"
           imagePullPolicy: IfNotPresent
           ports:
           - containerPort: 3000
@@ -88,10 +88,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - "backend.grandnerds.com"
+    - "backend.exampledomain.com"
     secretName: my-app-backend-tls
   rules:
-  - host: "backend.grandnerds.com"
+  - host: "backend.exampledomain.com"
     http:
       paths:
       - path: /
