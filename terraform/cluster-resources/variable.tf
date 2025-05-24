@@ -24,3 +24,18 @@ variable "cf_api_token" {
   sensitive   = true
 }
 
+
+variable "argoadminpassword" {
+  description = "argocd admin password"
+  sensitive   = true
+}
+
+variable "github_token" {
+  description = "github token used for authenticating repo"
+  sensitive   = true
+}
+
+variable "github_username" {
+  description = "github username used for authenticating repo"
+  sensitive   = true
+}

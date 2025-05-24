@@ -41,7 +41,7 @@ provider "helm" {
   }
 }
 
-
+# Nginx ingress controller
 resource "helm_release" "ingress_nginx" {
   name       = "opeth"
   repository = "https://kubernetes.github.io/ingress-nginx"
@@ -85,6 +85,7 @@ resource "helm_release" "ingress_nginx" {
   }
 }
 
+# cert-manager to gerate certs
 resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   chart            = "cert-manager"
@@ -98,6 +99,7 @@ resource "helm_release" "cert_manager" {
   depends_on = [ helm_release.ingress_nginx ]
 }
 
+#secret to be used by cert-manager's cluster issuers
 resource "kubernetes_secret" "cf_token" {
   metadata {
     name      = "cloudflare-api-token"
@@ -109,6 +111,8 @@ resource "kubernetes_secret" "cf_token" {
   type = "Opaque"
 }
 
+
+# cluster issuer for letsencrypt
 # resource "kubernetes_manifest" "cluster_issuer_staging" {
 #   manifest = yamldecode(file("letsencrypt_staging.yaml"))
 # }
@@ -116,3 +120,43 @@ resource "kubernetes_secret" "cf_token" {
 # resource "kubernetes_manifest" "cluster_issuer_prod" {
 #   manifest = yamldecode(file("letsencrypt_prod.yaml"))
 # }
+
+# argo cd config and installation using terraform and helm 
+resource "helm_release" "argocd" {
+  name       = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  version    = "5.34.1"
+  namespace        = "argocd"
+  create_namespace = true
+
+  values = [file("argo-values.yaml")]
+
+  set_sensitive {
+    name  = "configs.secret.argocdServerAdminPassword"
+    value = bcrypt(var.argoadminpassword)
+  }
+
+  lifecycle {
+    ignore_changes = [
+      set_sensitive, # Ignore changes to sensitive values
+      metadata,      # Ignore changes to metadata
+    ]
+  }
+}
+
+# Configure the Argo CD provider
+provider "argocd" {
+  server_addr = "argocd.example.online" 
+  username    = "admin"
+  password    = var.argoadminpassword
+  insecure    = true
+}
+
+# Add the GitHub repository to Argo CD
+resource "argocd_repository" "github_repo" {
+  repo = "https://github.com/faizananwar532/calendar-app" # Replace with your GitHub repository URL
+  username = var.github_username
+  password = var.github_token
+  depends_on = [helm_release.argocd]  
+}
