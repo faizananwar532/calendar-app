@@ -1,19 +1,49 @@
 global:
-  replicaCount: 1
+  # Common configuration
+  imageRegistry: ""
+  imagePullSecrets: []
+  namespace: ""
+  
+  # Resource configuration
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
 
-# Namespace where resources will be deployed
-namespace: april23
+  # Security configuration
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+
+  # Affinity configuration
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
 
 # Backend configuration
 backend:
-  replicaCount: ~
+  replicaCount: 2
   image:
     repository: "<ECR_REPO>/trainings"
     tag: "backend"
     pullPolicy: IfNotPresent
+    pullSecrets: []
   service:
     type: ClusterIP
     port: 3000
+    annotations: {}
+    labels: {}
   ingress:
     enabled: true
     className: nginx
@@ -24,41 +54,139 @@ backend:
     hostname: api.exampledomain.com
     pathType: ImplementationSpecific
     tls: true
+    tlsSecretName: ""
   env:
     MYSQL_DATABASE: calenderDb
-    # These values should be replaced with references to external secrets in production
-    MYSQL_USER: root
-    MYSQL_PASSWORD: "ASDqwe123!@#"
+    MYSQL_USER: ""
+    MYSQL_PASSWORD: ""
+    # Environment variables from secrets
+    envFrom:
+      - secretRef:
+          name: ""
   initContainers:
     waitForMySQL:
       image: busybox:1.35.0-uclibc
-  # livenessProbe:
-  #   httpGet:
-  #     path: /health
-  #     port: http
-  #   initialDelaySeconds: 30
-  #   periodSeconds: 10
-  # readinessProbe:
-  #   httpGet:
-  #     path: /health
-  #     port: http
-  #   initialDelaySeconds: 5
-  #   periodSeconds: 10
+      resources: {}
+      command: ["sh", "-c", "until nc -z my-mysql 3306; do echo \"Waiting for MySQL...\"; sleep 5; done;"]
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: "1"
+      memory: "1Gi"
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: "500m"
+      memory: "512Mi"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
 
 # Frontend configuration
 frontend:
-  replicaCount: ~
+  replicaCount: 2
   image:
     repository: "<ECR_REPO>/trainings"
     tag: "frontendv3"
     pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      cert-manager.io/acme-challenge-type: dns01
+      cert-manager.io/acme-dns01-provider: cloudflare
+    hostname: calendar.exampledomain.com
+    pathType: ImplementationSpecific
+    tls: true
+  env:
+    REACT_APP_API_BASE_URL: "https://api.exampledomain.com"
+    # Environment variables from secrets
+    envFrom:
+      - secretRef:
+          name: frontend-secrets
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+# Database configuration
+mysql:
+  enabled: true
+  auth:
+    rootPassword: "ASDqwe123!@#"
+    database: calenderDb
+    username: root
+    password: "ASDqwe123!@#"
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "default"
+      size: "8Gi"
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+  grafana:
+    enabled: true
+    adminPassword: "admin123!@#"
+    persistence:
+      enabled: true
+      storageClass: "default"
+      size: "8Gi"
+  #     port: http
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 10
+
+# Frontend configuration
+
   service:
     type: ClusterIP
     port: 80
@@ -92,27 +220,6 @@ frontend:
       cpu: 100m
       memory: 128Mi
 
-
-# MySQL configuration
-mysql:
-  fullnameOverride: ~
-  auth:
-    rootPassword: "ASDqwe123!@#"
-    database: "calenderDb"
-  initdbScripts:
-    create_table.sql: |
-      USE calenderDb;
-      CREATE TABLE IF NOT EXISTS events (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-  primary:
-    persistence:
-      enabled: true      # Changed from false to true
-      storageClass: ""   # Use default StorageClass or specify one
-      size: 1Gi          # Set an appropriate size for your database
 
 openproject:
   install: false

@@ -1,9 +1,0 @@
-dependencies:
-- name: mysql
-  repository: https://charts.bitnami.com/bitnami
-  version: 12.2.2
-- name: openproject
-  repository: https://charts.openproject.org
-  version: 9.10.0
-digest: sha256:37e87779f784e6771c99f3c92eab8158285935f5e62cf1e9e714da10f3680db0
-generated: "2025-04-24T15:14:45.002974659+05:00"

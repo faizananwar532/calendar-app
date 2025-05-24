@@ -4,13 +4,39 @@ description: A Helm chart for a web application with frontend and backend compon
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
+icon: "https://exampledomain.com/icon.png"
+keywords:
+  - web
+  - application
+  - frontend
+  - backend
+  - calendar
+home: "https://exampledomain.com"
+sources:
+  - https://github.com/faizananwar532/calendar-app
 maintainers:
   - name: App Team
     email: faizi@faizi.com
+    url: "https://exampledomain.com"
 dependencies:
 - name: mysql
   version: "12.2.2"
   repository: "https://charts.bitnami.com/bitnami"
+  condition: mysql.enabled
+  tags:
+    - database
+- name: prometheus
+  version: "16.11.0"
+  repository: "https://prometheus-community.github.io/helm-charts"
+  condition: monitoring.enabled
+  tags:
+    - monitoring
+- name: grafana
+  version: "6.44.1"
+  repository: "https://grafana.github.io/helm-charts"
+  condition: monitoring.enabled
+  tags:
+    - monitoring
 # - name: openproject
 #   version: "9.10.0"
 #   repository: https://charts.openproject.org
