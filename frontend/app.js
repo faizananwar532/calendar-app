@@ -1,5 +1,5 @@
 // Define the API base URL
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://10.43.185.13:3000/api';
 
 // Function to format date to a more readable format
 function formatDate(dateString) {
