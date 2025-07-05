@@ -33,7 +33,7 @@ global:
 
 # Backend configuration
 backend:
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: "<ECR_REPO>/trainings"
     tag: "backend"
@@ -104,7 +104,7 @@ backend:
 
 # Frontend configuration
 frontend:
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: "<ECR_REPO>/trainings"
     tag: "frontendv3"
@@ -167,7 +167,7 @@ mysql:
 
 # Monitoring configuration
 monitoring:
-  enabled: true
+  enabled: false
   prometheus:
     enabled: true
     serviceMonitor:
@@ -186,40 +186,6 @@ monitoring:
   #   periodSeconds: 10
 
 # Frontend configuration
-
-  service:
-    type: ClusterIP
-    port: 80
-  ingress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-      cert-manager.io/acme-challenge-type: dns01
-      cert-manager.io/acme-dns01-provider: cloudflare
-    hostname: calendar.exampledomain.com
-    pathType: ImplementationSpecific
-    tls: true
-  # livenessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
-  #   initialDelaySeconds: 30
-  #   periodSeconds: 10
-  # readinessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: http
-  #   initialDelaySeconds: 5
-  #   periodSeconds: 10
-  resources:
-    limits:
-      cpu: 300m
-      memory: 256Mi
-    requests:
-      cpu: 100m
-      memory: 128Mi
-
 
 openproject:
   install: false
