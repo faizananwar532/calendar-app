@@ -7,7 +7,7 @@ namespace: staging
 backend:
   image:
     repository: "faizananwar532/calendar-backend"
-    tag: "latest"
+    tag: "4a9bbb84"
     pullPolicy: IfNotPresent
   service:
     # type: ClusterIP
@@ -23,7 +23,7 @@ backend:
 frontend:
   image:
     repository: "faizananwar532/calendar-frontend"
-    tag: "latest"
+    tag: "4a9bbb84"
     pullPolicy: IfNotPresent
   service:
     # type: ClusterIP
