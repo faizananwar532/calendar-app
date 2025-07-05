@@ -10,6 +10,8 @@ backend:
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
+    # type: ClusterIP
+    type: LoadBalancer
     port: 3000
   env:
     MYSQL_USER: root
@@ -24,6 +26,8 @@ frontend:
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
+    # type: ClusterIP
+    type: LoadBalancer
     port: 80
   hostname: example.com
   ingress:
