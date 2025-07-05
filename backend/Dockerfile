@@ -1,10 +1,11 @@
-FROM node:16
+FROM node:16-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
-RUN apt-get update && apt-get install -y netcat
+RUN npm ci --only=production && \
+    apk add --no-cache netcat-openbsd
+
 COPY server.js ./
 
 EXPOSE 3000
